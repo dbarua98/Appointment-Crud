@@ -1,43 +1,81 @@
-import React, { useState } from 'react'
-import { Modal, Button, Form,Row,Col } from 'react-bootstrap';
-import DatePicker from "react-datepicker";
-import "react-datepicker/dist/react-datepicker.css";
-
-
+// ReceiptList.js
+import React, { useState } from 'react';
+import { Button, Table } from 'react-bootstrap';
+import ReceiptModal from './ReceiptModal';
 
 const ReceiptList = () => {
     const [isModalOpen, setIsModalOpen] = useState(false);
-    const [itemName, setItemName] = useState('');
-    const [items,setItems] = useState([]);
+    const [receipts, setReceipts] = useState([
+        { id: 1, receiptNo: 'R001', receiptDate: '2024-04-03', personName: 'John Doe', totalQty: 3, netAmount: 150, remarks: 'Paid' },
+        { id: 2, receiptNo: 'R002', receiptDate: '2024-04-03', personName: 'Jane Smith', totalQty: 2, netAmount: 100, remarks: 'Pending' },
+        { id: 3, receiptNo: 'R003', receiptDate: '2024-04-02', personName: 'Alice Johnson', totalQty: 1, netAmount: 50, remarks: 'Paid' }
+    ]);
+    const [selectedReceipt, setSelectedReceipt] = useState(null);
+    const [billData, setBillData] = useState({
+      billNumber: `${new Date().getFullYear()}${Math.floor(
+        Math.random() * 10000
+      )}`,
+      billDate: new Date().toLocaleDateString("en-CA"),
+      customerID: "",
+      netAmount: "",
+      totalDiscountAmount: "0",
+      Remarks: "",
+      billItems: [
+        {
+          descr: "",
+          rate: 0,
+          qty: 0,
+          amount: 0,
+        },
+      ],
+    });
 
     const handleCloseModal = () => {
         setIsModalOpen(false);
+        setSelectedReceipt(null);
     };
 
     const handleAddClick = () => {
+        setSelectedReceipt(null); // Clear selected receipt
         setIsModalOpen(true);
     };
-    const handleAddRow = () => {
-        setItems( [...items, { descr: "", rate: 0, qty: 0, amount: 0 }])
-          
-    
-      };
 
-    const handleSave = () => {
+    const handleSave = (updatedReceipt) => {
+      console.log('updatedReceipt', billData);
+      // setReceipts({...receipts,billData})
+        // if (updatedReceipt.id) {
+        //     // Update existing receipt
+        //     const updatedReceipts = receipts.map(item =>
+        //         item.id === updatedReceipt.id ? updatedReceipt : item
+        //     );
+        //     setReceipts(updatedReceipts);
+        // } else {
+        //     // Add new receipt
+        //     setReceipts([...receipts, { ...updatedReceipt, id: new Date().getTime() }]);
+        // }
+        handleCloseModal();
+    };
 
-        setIsModalOpen(false);
+    const handleEditClick = (receipt) => {
+        setSelectedReceipt(receipt);
+        setIsModalOpen(true);
+    };
+
+    const handleDeleteClick = (id) => {
+        const updatedReceipts = receipts.filter(item => item.id !== id);
+        setReceipts(updatedReceipts);
     };
 
     return (
-        <div className="container " style={{ height: "100vh" }}>
+        <div className="container" style={{ height: '100vh' }}>
             <div className="w-100 d-flex justify-content-between">
                 <h3>Receipt List</h3>
-                <Button variant="primary" onClick={handleAddClick} >
+                <Button variant="primary" onClick={handleAddClick}>
                     Add
                 </Button>
             </div>
 
-            <table className="container text-center">
+            <Table striped bordered hover>
                 <thead>
                     <tr>
                         <th>S.No.</th>
@@ -47,116 +85,49 @@ const ReceiptList = () => {
                         <th>Total Qty</th>
                         <th>Net Amount</th>
                         <th>Remarks</th>
-                        <th></th>
+                        <th>Action</th>
                     </tr>
                 </thead>
                 <tbody>
-                    {/* {bills?.map((bill) => (
-<tr key={bill?.primaryKeyID}>
-  <td>{bill?.primaryKeyID}</td>
-  <td>{bill?.billNo}</td>
-  <td>{bill?.billDate.substr(0,10)}</td>
-  <td>{bill?.customerName}</td>
-  <td>{bill?.netAmount}</td>
-  <td>{bill?.remarks && bill.remarks.replace(/<[^>]*>/g, '').substring(0, 50)}</td>
-  <td className="d-flex">
-    <Button className="mx-2" variant="info" onClick={() => handleEditClick(bill.billID)}>
-      Edit
-    </Button>
-    <Button
-      variant="danger"
-      onClick={() => handleDeleteClick(bill.billID)}
-    >
-      Delete
-    </Button>
-  </td>
-</tr>
-))} */}
+                    {receipts.map((item, index) => (
+                        <tr key={index}>
+                            <td>{index + 1}</td>
+                            <td>{item.receiptNo}</td>
+                            <td>{item.receiptDate}</td>
+                            <td>{item.personName}</td>
+                            <td>{item.totalQty}</td>
+                            <td>{item.netAmount}</td>
+                            <td>{item.remarks}</td>
+                            <td className="d-flex">
+                                <Button
+                                    className="mx-2"
+                                    variant="info"
+                                    onClick={() => handleEditClick(item)}
+                                >
+                                    Edit
+                                </Button>
+                                <Button
+                                    variant="danger"
+                                    onClick={() => handleDeleteClick(item.id)}
+                                >
+                                    Delete
+                                </Button>
+                            </td>
+                        </tr>
+                    ))}
                 </tbody>
-            </table>
+            </Table>
 
-            <Modal show={isModalOpen} onHide={handleCloseModal}>
-                <Modal.Header closeButton>
-                    <Modal.Title>Receipt</Modal.Title>
-                </Modal.Header>
-                <Modal.Body>
-                    <Form>
-                        <div>
-                            <Form.Group controlId="formBillNumber">
-                                <Form.Label>Receipt No</Form.Label>
-                                <Form.Control type="text" readOnly />
-                            </Form.Group>
-                            <Form.Group controlId="formBillDate">
-                                <Form.Label>Bill Date</Form.Label>
-                                <DatePicker
-                                    // selected={new Date(billData.billDate)}
-                                    // onChange={(date) =>
-                                    //     setBillData({
-                                    //         ...billData,
-                                    //         billDate: date.toLocaleDateString("en-CA"),
-                                    //     })
-                                    // }
-                                />
-                            </Form.Group>
-                            <Form.Group controlId="formBillNumber">
-                                <Form.Label>Person Name</Form.Label>
-                                <Form.Control type="text" readOnly />
-                            </Form.Group>
-                        </div>
-                        <div>
-                        <Form.Group controlId="formRows">
-          {items.map((row, index) => (
-            <Row key={index}>
-              <Col>
-                <Form.Control
-                  type="text"
-                  placeholder="Description"
-                  value={row.descr}
-                //   onChange={(e) => handleRowChange(index, "descr", e.target.value)}
-                  name={`descr_${index}`}
-                  id={`descr_${index}`}
-                />
-              </Col>
-              <Col>
-                <Form.Control
-                  type="number"
-                  placeholder="Rate"
-                  value={row.rate}
-                //   onChange={(e) => handleRowChange(index, "rate", parseFloat(e.target.value))}
-                />
-              </Col>
-              <Col>
-                <Form.Control
-                  type="number"
-                  placeholder="Qty"
-                  value={row.qty}
-                //   onChange={(e) => handleRowChange(index, "qty", parseFloat(e.target.value))}
-                />
-              </Col>
-              <Col>
-                <Form.Control type="text" readOnly value={row.amount.toFixed(2)} />
-              </Col>
-            </Row>
-          ))}
-          <Button variant="primary" onClick={handleAddRow}>
-            Add Row
-          </Button>
-        </Form.Group>
-                        </div>
-                    </Form>
-                </Modal.Body>
-                <Modal.Footer>
-                    <Button variant="secondary" onClick={handleCloseModal}>
-                        Close
-                    </Button>
-                    <Button variant="primary" onClick={handleSave}>
-                        Save
-                    </Button>
-                </Modal.Footer>
-            </Modal>
-
+            <ReceiptModal
+                show={isModalOpen}
+                handleClose={handleCloseModal}
+                handleSave={handleSave}
+                receipt={selectedReceipt} 
+                billData={billData}
+                setBillData={setBillData}
+            />
         </div>
-    )
-}
+    );
+};
 
-export default ReceiptList
+export default ReceiptList;

@@ -3,19 +3,31 @@ import { Modal, Button, Form } from 'react-bootstrap';
 
 const ItemModal = ({ show, handleClose, handleSave, item }) => {
     const [itemName, setItemName] = useState('');
+    const[error,setError]= useState({
+        item: false
+    })
 
     useEffect(() => {
         if (item) {
-            setItemName(item.name);
+            setItemName(item.ItemName);
         }
     }, [item]);
 
     const handleInputChange = (e) => {
         setItemName(e.target.value);
+        setError({...error,item:false})
     };
 
+   
+
     const handleSaveItem = () => {
-        handleSave(itemName);
+        if(itemName){
+        handleSave(itemName,item);
+        setItemName('')
+        }
+        else{
+            setError({...error,item:true})
+        }
     };
 
     return (
@@ -28,6 +40,7 @@ const ItemModal = ({ show, handleClose, handleSave, item }) => {
                     <Form.Group controlId="itemName">
                         <Form.Label>Item Name</Form.Label>
                         <Form.Control type="text" value={itemName} onChange={handleInputChange} />
+                        {error.item ? "Item is empty":""}
                     </Form.Group>
                 </Form>
             </Modal.Body>
