@@ -1,32 +1,147 @@
-import React, { useState } from 'react';
+
+import React, { useEffect, useState } from 'react';
 import { Button, Table } from 'react-bootstrap';
 import AppointmentModal from './AppointmentModal';
+import axios from 'axios';
 
 const AppointmentList = () => {
+    const token = localStorage.getItem("token");
     const [isModalOpen, setIsModalOpen] = useState(false);
-    const [appointments, setAppointments] = useState([
-        {
-            id: 1,
-            itemName: 'John Doe',
-            gender: 'male',
-            doctorName: 'Dr. Smith',
-            specialty: 'Cardiology',
-            education: 'MD'
-        },
-        {
-            id: 2,
-            itemName: 'Jane Doe',
-            gender: 'female',
-            doctorName: 'Dr. Johnson',
-            specialty: 'Dermatology',
-            education: 'MD'
-        }
-    ]);
+    const [appointments, setAppointments] = useState([]);
     const [selectedAppointment, setSelectedAppointment] = useState(null);
+    const [stateList, setStateList] = useState([]);
+    const [filterCity, setFilterCity] = useState([]);
+    const [cityList, setCityList] = useState([]);
+    const [doctorsList, setDoctorsList] = useState([]);
+    const [specialtiesList, setSpecialtiesList] = useState([]);
+    const initialData = {
+
+        appointmentID: 0,
+        appointmentDateTime: "",
+        firstName: "",
+        lastName: "",
+        fullName: "",
+        dob: "",
+        gender: null,
+        mobileNo: "",
+        maritalStatus: null,
+        address: "",
+        stateID: null,
+        cityID: null,
+        reasonForAppointment: "",
+        specialityID: null,
+        doctorID: null
+
+    }
+    const [patientAppointment, setPatientAppointment] = useState(initialData)
+    const initialErrors = {
+        appointmentDateTime: false,
+        firstName: false,
+        lastName: false,
+        fullName: false,
+        dob: false,
+        gender: false,
+        mobileNo: false,
+        maritalStatus: false,
+        address: false,
+        stateID: false,
+        cityID: false,
+        reasonForAppointment: false,
+        specialityID: false,
+        doctorID: false
+    }
+    const [patientAppointmentError, setPatientAppointmentError] = useState(initialErrors)
+
+
+    const fetchDoctorList = async () => {
+        try {
+            const response = await axios.get('https://localhost:7137/api/Doctor/GetList', {
+                headers: {
+                    Authorization: `Bearer ${token}`
+                }
+            });
+            const doctorList = response.data;
+            setDoctorsList(doctorList)
+            console.log('Doctor list:', doctorList);
+        } catch (error) {
+            console.error('Error fetching doctor list:', error.message);
+        }
+    }
+
+    const fetchSpecialtyList = async () => {
+        try {
+            const response = await axios.get('https://localhost:7137/api/Speciality/GetList', {
+                headers: {
+                    Authorization: `Bearer ${token}`
+                }
+            });
+            const specialities = response.data;
+            setSpecialtiesList(specialities)
+            console.log('Speciality list:', specialities);
+        } catch (error) {
+            console.error('Error fetching speciality list:', error.message);
+        }
+    }
+
+    const fetchPatientList = async () => {
+        try {
+            const response = await axios.get('https://localhost:7137/api/Patient/GetList', {
+                headers: {
+                    Authorization: `Bearer ${token}`
+                }
+            });
+            const patientList = response.data;
+            setAppointments(patientList)
+            console.log('Patient list:', patientList);
+        } catch (error) {
+            console.error('Error fetching patient list:', error.message);
+        }
+    }
+
+    const fetchStateList = async () => {
+        try {
+            const response = await axios.get('https://localhost:7137/api/State/GetList', {
+                headers: {
+                    Authorization: `Bearer ${token}`
+                }
+            });
+            const stateList = response.data;
+            setStateList(stateList)
+            console.log('State list:', stateList);
+        } catch (error) {
+            console.error('Error fetching state list:', error.message);
+        }
+    }
+
+    const fetchCityList = async () => {
+        try {
+            const response = await axios.get('https://localhost:7137/api/City/GetList', {
+                headers: {
+                    Authorization: `Bearer ${token}`
+                }
+            });
+            const cityList = response.data;
+            setCityList(cityList)
+            console.log('City list:', cityList);
+        } catch (error) {
+            console.error('Error fetching city list:', error.message);
+        }
+    }
+
+    useEffect(() => {
+        fetchPatientList()
+        fetchDoctorList()
+        fetchSpecialtyList()
+        fetchStateList()
+        fetchCityList()
+
+    }, [])
 
     const handleCloseModal = () => {
+        setPatientAppointment(initialData)
         setIsModalOpen(false);
         setSelectedAppointment(null);
+        setPatientAppointmentError(initialErrors)
     };
 
     const handleAddClick = () => {
@@ -39,31 +154,189 @@ const AppointmentList = () => {
         setIsModalOpen(true);
     };
 
-    const handleSaveAppointment = (appointmentData) => {
+    const validateAppointment = () => {
+        debugger;
+        let hasError = false;
+        const newErrors = {};
+    
+        for (const key in patientAppointment) {
+            if (key !== 'appointmentID' && !patientAppointment[key]) {
+                newErrors[key] = true;
+                hasError = true;
+            } else {
+                newErrors[key] = false;
+            }
+        }
+    
+        setPatientAppointmentError(newErrors);
+    
+        return hasError;
+    };
+
+    const handleSaveAppointment = async () => {
+        debugger
+        if (validateAppointment()) {
+            return;
+        }
+        debugger
+
         if (selectedAppointment) {
-            // Update existing appointment
-            const updatedAppointments = appointments.map(appointment => {
-                if (appointment.id === selectedAppointment.id) {
-                    return { ...appointment, ...appointmentData };
-                }
-                return appointment;
-            });
-            setAppointments(updatedAppointments);
+            const selectedDateTime = new Date(patientAppointment.appointmentDateTime);
+
+            // Get the timezone offset in minutes
+            const timezoneOffset = selectedDateTime.getTimezoneOffset();
+
+            // Adjust the date and time by subtracting the timezone offset
+            selectedDateTime.setMinutes(selectedDateTime.getMinutes() - timezoneOffset);
+
+            // Convert the adjusted date and time to ISO 8601 format
+            const isoDateTime = selectedDateTime.toISOString();
+            console.log("updateData", patientAppointment)
+            const updatedPatientData = {
+                "appointmentID": patientAppointment.appointmentID,
+                "appointmentDateTime": isoDateTime,
+                "firstName": patientAppointment.firstName,
+                "lastName": patientAppointment.lastName,
+                "fullName": patientAppointment.fullName,
+                "dob": patientAppointment.dob,
+                "gender": parseInt(patientAppointment.gender),
+                "mobileNo": patientAppointment.mobileNo,
+                "maritalStatus": parseInt(patientAppointment.maritalStatus),
+                "address": patientAppointment.address,
+                "stateID": parseInt(patientAppointment.stateID),
+                "cityID": parseInt(patientAppointment.cityID),
+                "reasonForAppointment": patientAppointment.reasonForAppointment,
+                "specialityID": parseInt(patientAppointment.specialityID),
+                "doctorID": parseInt(patientAppointment.doctorID)
+            }
+            try {
+                const response = await axios.put(`https://localhost:7137/api/Patient/Update/`, updatedPatientData, {
+                    headers: {
+                        Authorization: `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+                console.log('Patient updated successfully:');
+                fetchPatientList();
+                setPatientAppointment(initialData)
+                setPatientAppointmentError(initialErrors)
+            } catch (error) {
+                console.error('Error updating patient:', error.message);
+            }
         } else {
-            // Add new appointment
-            const newAppointment = {
-                id: appointments.length > 0 ? appointments[appointments.length - 1].id + 1 : 1,
-                ...appointmentData
-            };
-            setAppointments([...appointments, newAppointment]);
+
+            console.log("first", patientAppointment)
+            const selectedDateTime = new Date(patientAppointment.appointmentDateTime);
+
+            // Get the timezone offset in minutes
+            const timezoneOffset = selectedDateTime.getTimezoneOffset();
+
+            // Adjust the date and time by subtracting the timezone offset
+            selectedDateTime.setMinutes(selectedDateTime.getMinutes() - timezoneOffset);
+
+            // Convert the adjusted date and time to ISO 8601 format
+            const isoDateTime = selectedDateTime.toISOString();
+            const patientData = {
+                "appointmentID": 0,
+                "appointmentDateTime": isoDateTime,
+                "firstName": patientAppointment.firstName,
+                "lastName": patientAppointment.lastName,
+                "fullName": patientAppointment.fullName,
+                "dob": patientAppointment.dob,
+                "gender": parseInt(patientAppointment.gender),
+                "mobileNo": patientAppointment.mobileNo,
+                "maritalStatus": parseInt(patientAppointment.maritalStatus),
+                "address": patientAppointment.address,
+                "stateID": parseInt(patientAppointment.stateID),
+                "cityID": parseInt(patientAppointment.cityID),
+                "reasonForAppointment": patientAppointment.reasonForAppointment,
+                "specialityID": parseInt(patientAppointment.specialityID),
+                "doctorID": parseInt(patientAppointment.doctorID)
+            }
+
+            try {
+                const response = await axios.post('https://localhost:7137/api/Patient/Insert', patientData, {
+                    headers: {
+                        Authorization: `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+                const data = response.data;
+                console.log('Patient inserted successfully:', data);
+                setPatientAppointment(initialData)
+                setPatientAppointmentError(initialErrors)
+                fetchPatientList();
+            } catch (error) {
+                console.error('Error inserting patient:', error.message);
+            }
         }
         setIsModalOpen(false);
     };
 
-    const handleDeleteAppointment = (appointmentId) => {
-        const updatedAppointments = appointments.filter(appointment => appointment.id !== appointmentId);
-        setAppointments(updatedAppointments);
+    const handleDeleteAppointment = async (appointmentId) => {
+        try {
+            const response = await axios.delete(`https://localhost:7137/api/Patient/Delete/${appointmentId}`, {
+                headers: {
+                    Authorization: `Bearer ${token}`
+                }
+            });
+            const data = response.data;
+            fetchPatientList()
+            console.log('Patient deleted successfully:');
+        } catch (error) {
+            console.error('Error deleting patient:', error.message);
+        }
     };
+
+    const handleChange = (e) => {
+        const { name, value } = e.target;
+        // if (selectedAppointment) {
+        //     setSelectedAppointment(prevState => ({
+        //         ...prevState,
+        //         [name]: value
+        //     }));
+        // } 
+        // else {
+        setPatientAppointment(prevState => ({
+            ...prevState,
+            [name]: value
+        }));
+        setPatientAppointmentError({
+            ...patientAppointmentError, [name]: false
+        })
+        // }
+    };
+
+    const handleDateChange = (value) => {
+        setPatientAppointment({ ...patientAppointment, dob: value });
+        setPatientAppointmentError({...patientAppointmentError,dob:false})
+    };
+    const handleDateTimeChange = (date) => {
+        console.log("dateandtime", date._d)
+        setPatientAppointment({ ...patientAppointment, appointmentDateTime: date._d });
+        setPatientAppointmentError({...patientAppointmentError,appointmentDateTime:false})
+    };
+
+    const handleDoctorChange = (selectedOption) => {
+        setPatientAppointment({ ...patientAppointment, doctorID: selectedOption.value });
+        setPatientAppointmentError({...patientAppointmentError,doctorID:false})
+    };
+    const handleSpecialtyChange = (selectedOption) => {
+        setPatientAppointment({ ...patientAppointment, specialityID: selectedOption.value });
+        setPatientAppointmentError({...patientAppointmentError,specialityID:false})
+    };
+    const handleStateChange = (selectedOption) => {
+        setPatientAppointment({ ...patientAppointment, stateID: selectedOption.value });
+        setPatientAppointmentError({...patientAppointmentError,stateID:false})
+        let filteredCities = cityList.filter(city => city.StateID === parseInt(selectedOption.value));
+        setFilterCity(filteredCities)
+    };
+
+    const handleCityChange = (selectedOption) => {
+        setPatientAppointment({ ...patientAppointment, cityID: selectedOption.value });
+        setPatientAppointmentError({...patientAppointmentError,cityID:false})
+    };
+
 
     return (
         <div className="container" style={{ height: "100vh" }}>
@@ -85,16 +358,20 @@ const AppointmentList = () => {
                 </thead>
                 <tbody>
                     {appointments.map((appointment, index) => (
-                        <tr key={appointment.id}>
+                        <tr key={appointment?.AppointmentID}>
                             <td>{index + 1}</td>
-                            <td>{appointment.itemName}</td>
-                            <td>{appointment.gender}</td>
-                            <td>{appointment.doctorName}</td>
-                            <td>{appointment.specialty}</td>
-                            <td>{appointment.education}</td>
+                            <td>{appointment?.FullName}</td>
+                            <td>
+                                {appointment?.Gender === 0 && 'Male'}
+                                {appointment?.Gender === 1 && 'Female'}
+                                {appointment?.Gender === 2 && 'Others'}
+                            </td>
+                            <td>{appointment?.DoctorName}</td>
+                            <td>{appointment?.SpecialityName}</td>
+                            <td>{appointment?.education}</td>
                             <td>
                                 <Button variant="info" onClick={() => handleEditClick(appointment)}>Edit</Button>
-                                <Button variant="danger" onClick={() => handleDeleteAppointment(appointment.id)}>Delete</Button>
+                                <Button variant="danger" onClick={() => handleDeleteAppointment(appointment.AppointmentID)}>Delete</Button>
                             </td>
                         </tr>
                     ))}
@@ -104,7 +381,21 @@ const AppointmentList = () => {
                 show={isModalOpen}
                 handleClose={handleCloseModal}
                 handleSave={handleSaveAppointment}
-                appointment={selectedAppointment}
+                selectedAppointment={selectedAppointment}
+                patientAppointment={patientAppointment}
+                handleChange={handleChange}
+                handleDateChange={handleDateChange}
+                handleDateTimeChange={handleDateTimeChange}
+                doctorsList={doctorsList}
+                handleDoctorChange={handleDoctorChange}
+                specialtiesList={specialtiesList}
+                handleSpecialtyChange={handleSpecialtyChange}
+                stateList={stateList}
+                handleStateChange={handleStateChange}
+                cityList={selectedAppointment ? cityList : filterCity}
+                handleCityChange={handleCityChange}
+                setPatientAppointment={setPatientAppointment}
+                patientAppointmentError={patientAppointmentError}
             />
         </div>
     );
