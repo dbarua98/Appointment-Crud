@@ -1,11 +1,12 @@
-// ReceiptList.js
 import React, { useEffect, useState } from "react";
-import { Button, Table } from "react-bootstrap";
+import { Button, Table, useAccordionButton } from "react-bootstrap";
 import ReceiptModal from "./ReceiptModal";
 import axios from "axios";
+import { useNavigate } from "react-router-dom";
 
 const ReceiptList = () => {
   const token = localStorage.getItem("token");
+  const navigate = useNavigate();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [receipts, setReceipts] = useState([]);
   const [selectedReceipt, setSelectedReceipt] = useState(null);
@@ -17,7 +18,7 @@ const ReceiptList = () => {
       Math.random() * 10000
     )}`,
     personName: "",
-    receiptDate: "2024-04-03T12:47:38.383Z",
+    receiptDate: "",
     doctorID: 14,
     netAmount: 0,
     remarks: "",
@@ -26,19 +27,76 @@ const ReceiptList = () => {
         receiptDetailID: 0,
         receiptID: 0,
         itemID: 0,
-        quantity: 0,
-        rate: 0,
+        quantity: "",
+        rate: "",
         discount: 0,
         amount: 0,
         itemName: "",
         unit: "",
         grossAmount: 0,
-        discountPercent: 0,
+        discountPercent: "",
       },
     ],
   }
 
   const [receiptData, setReceiptData] = useState(initialData);
+  const initialErrors = {
+    receiptNo: false,
+    personName: false,
+    receiptDate: false,
+    remarks: false,
+    receiptDetail:false
+  }
+const [receiptError, setReceiptError] = useState(initialErrors)
+
+useEffect(()=>{
+  if(!token){
+      navigate('/')
+  }
+},[])
+
+
+const validateReceipt = () => {
+  debugger
+  let hasError = false;
+  let hasDetailError = false; 
+  const newErrors = {};
+
+  // Check for missing values in receiptData object
+  for (const key in receiptData) {
+      if (key !== 'receiptDetail' && key !== 'receiptID' && !receiptData[key]) {
+          newErrors[key] = true;
+          hasError = true;
+      } else {
+          newErrors[key] = false;
+      }
+  }
+
+  // Check for missing values in receiptDetail array
+  if (receiptData.receiptDetail) {
+      receiptData.receiptDetail.forEach((detail, index) => {
+          let detailError = false; // Flag to track if any error occurs in detail object
+          for (const key in detail) {
+              if (key !== 'receiptDetailID' && key !== 'receiptID' && key !== 'discount' && key !== 'discountPercent' && key !== 'amount' && key !== 'itemName' && key !== 'grossAmount' && key !== 'unit' && !detail[key]) {
+                  newErrors[`receiptDetail[${index}].${key}`] = true;
+                  hasError = true;
+                  detailError = true; // Set detailError to true if any error occurs in detail object
+              } else {
+                  newErrors[`receiptDetail[${index}].${key}`] = false;
+              }
+          }
+          if (detailError) {
+              hasDetailError = true; // Set hasDetailError to true if any detail error occurs
+          }
+      });
+      newErrors['receiptDetail'] = hasDetailError; // Set receiptDetail error based on hasDetailError
+  }
+
+  setReceiptError(newErrors);
+
+  return hasError;
+};
+
 
   const fetchReceiptList = async () => {
     try {
@@ -82,16 +140,22 @@ const ReceiptList = () => {
     setIsModalOpen(false);
     setSelectedReceipt(null);
     setReceiptData(initialData)
+    setReceiptError(initialErrors)
   };
 
+  console.log("Errors",receiptError)
+
   const handleAddClick = () => {
-    setSelectedReceipt(null); // Clear selected receipt
+    setSelectedReceipt(null); 
     setIsModalOpen(true);
   };
 
   const handleSave = async () => {
     debugger;
     if (selectedReceipt) {
+      if (validateReceipt()) {
+        return;
+    }
       const extractReceiptDetailItems = () => {
         const extractedItems = receiptData.receiptDetail.map((detail) => ({
           receiptDetailID: detail.receiptDetailID,
@@ -134,7 +198,11 @@ const ReceiptList = () => {
         console.error("Error updating receipt:", error.message);
       }
     } else {
+      
       console.log("dataAdd", receiptData);
+      if (validateReceipt()) {
+        return;
+    }
 
       const extractReceiptDetailItems = () => {
         const extractedItems = receiptData.receiptDetail.map((detail) => ({
@@ -238,26 +306,18 @@ const ReceiptList = () => {
       ...prevState,
       [name]: value,
     }));
-    // setPatientAppointmentError({
-    //     ...patientAppointmentError, [name]: false
-    // })
-  };
-  const handleItemChange = (e) => {
-    const { name, value } = e.target;
-
-    setReceiptData((prevState) => ({
-      ...prevState,
-      receiptDetail: {
-        ...prevState.receiptDetail,
-        [name]: value,
-      },
-    }));
+    setReceiptError({
+        ...receiptError, [name]: false
+    })
   };
 
-//   const handleItemChange = (selectedOption) => {
-//     setReceiptData({ ...receiptData});
-//     // setPatientAppointmentError({...patientAppointmentError,specialityID:false})
-// };
+  const formatReceiptDate = (receiptDate) => {
+    const date = new Date(receiptDate);
+    const formattedDate = date.toISOString().split('T')[0];
+    return formattedDate;
+};
+ 
+
   return (
     <div className="container" style={{ height: "100vh" }}>
       <div className="w-100 d-flex justify-content-between">
@@ -273,8 +333,8 @@ const ReceiptList = () => {
             <th>S.No.</th>
             <th>Receipt No</th>
             <th>Receipt Date</th>
-            <th>Person Name</th>
-            <th>Total Qty</th>
+            {/* <th>Person Name</th> */}
+            {/* <th>Total Qty</th> */}
             <th>Net Amount</th>
             <th>Remarks</th>
             <th>Action</th>
@@ -285,11 +345,11 @@ const ReceiptList = () => {
             <tr key={index}>
               <td>{index + 1}</td>
               <td>{item.ReceiptNo}</td>
-              <td>{item.ReceiptDate}</td>
-              <td>{item.personName}</td>
-              <td>{item.totalQty}</td>
+              <td>{formatReceiptDate(item.ReceiptDate)}</td>
+              {/* <td>{item.personName}</td> */}
+              {/* <td>{item.totalQty}</td> */}
               <td>{item.NetAmount}</td>
-              <td>{item.remarks}</td>
+              <td>{item.Remarks}</td>
               <td className="d-flex">
                 <Button
                   className="mx-2"
@@ -319,8 +379,9 @@ const ReceiptList = () => {
         setReceiptData={setReceiptData}
         handleDateChange={handleDateChange}
         handleChange={handleChange}
-        // handleItemChange={handleItemChange}
         itemList={itemList}
+        receiptError={receiptError}
+        setReceiptError={setReceiptError}
       />
     </div>
   );
