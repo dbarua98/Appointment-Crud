@@ -1,9 +1,9 @@
-
 import React, { useEffect, useState } from 'react';
 import { Button, Table } from 'react-bootstrap';
 import AppointmentModal from './AppointmentModal';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
+import DeleteConfirmationModal from './DeleteConfirmationModal'; 
 
 const AppointmentList = () => {
     const token = localStorage.getItem("token");
@@ -16,8 +16,8 @@ const AppointmentList = () => {
     const [cityList, setCityList] = useState([]);
     const [doctorsList, setDoctorsList] = useState([]);
     const [specialtiesList, setSpecialtiesList] = useState([]);
+    const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
     const initialData = {
-
         appointmentID: 0,
         appointmentDateTime: "",
         firstName: "",
@@ -33,9 +33,8 @@ const AppointmentList = () => {
         reasonForAppointment: "",
         specialityID: null,
         doctorID: null
-
-    }
-    const [patientAppointment, setPatientAppointment] = useState(initialData)
+    };
+    const [patientAppointment, setPatientAppointment] = useState(initialData);
     const initialErrors = {
         appointmentDateTime: false,
         firstName: false,
@@ -51,15 +50,14 @@ const AppointmentList = () => {
         reasonForAppointment: false,
         specialityID: false,
         doctorID: false
-    }
-    const [patientAppointmentError, setPatientAppointmentError] = useState(initialErrors)
+    };
+    const [patientAppointmentError, setPatientAppointmentError] = useState(initialErrors);
 
-    useEffect(()=>{
-        if(!token){
-            navigate('/')
+    useEffect(() => {
+        if (!token) {
+            navigate('/');
         }
-    },[])
-
+    }, []);
 
     const fetchDoctorList = async () => {
         try {
@@ -69,12 +67,12 @@ const AppointmentList = () => {
                 }
             });
             const doctorList = response.data;
-            setDoctorsList(doctorList)
+            setDoctorsList(doctorList);
             console.log('Doctor list:', doctorList);
         } catch (error) {
             console.error('Error fetching doctor list:', error.message);
         }
-    }
+    };
 
     const fetchSpecialtyList = async () => {
         try {
@@ -84,12 +82,12 @@ const AppointmentList = () => {
                 }
             });
             const specialities = response.data;
-            setSpecialtiesList(specialities)
+            setSpecialtiesList(specialities);
             console.log('Speciality list:', specialities);
         } catch (error) {
             console.error('Error fetching speciality list:', error.message);
         }
-    }
+    };
 
     const fetchPatientList = async () => {
         try {
@@ -99,12 +97,12 @@ const AppointmentList = () => {
                 }
             });
             const patientList = response.data;
-            setAppointments(patientList)
+            setAppointments(patientList);
             console.log('Patient list:', patientList);
         } catch (error) {
             console.error('Error fetching patient list:', error.message);
         }
-    }
+    };
 
     const fetchStateList = async () => {
         try {
@@ -114,12 +112,12 @@ const AppointmentList = () => {
                 }
             });
             const stateList = response.data;
-            setStateList(stateList)
+            setStateList(stateList);
             console.log('State list:', stateList);
         } catch (error) {
             console.error('Error fetching state list:', error.message);
         }
-    }
+    };
 
     const fetchCityList = async () => {
         try {
@@ -129,27 +127,26 @@ const AppointmentList = () => {
                 }
             });
             const cityList = response.data;
-            setCityList(cityList)
+            setCityList(cityList);
             console.log('City list:', cityList);
         } catch (error) {
             console.error('Error fetching city list:', error.message);
         }
-    }
+    };
 
     useEffect(() => {
-        fetchPatientList()
-        fetchDoctorList()
-        fetchSpecialtyList()
-        fetchStateList()
-        fetchCityList()
-
-    }, [])
+        fetchPatientList();
+        fetchDoctorList();
+        fetchSpecialtyList();
+        fetchStateList();
+        fetchCityList();
+    }, []);
 
     const handleCloseModal = () => {
-        setPatientAppointment(initialData)
+        setPatientAppointment(initialData);
         setIsModalOpen(false);
         setSelectedAppointment(null);
-        setPatientAppointmentError(initialErrors)
+        setPatientAppointmentError(initialErrors);
     };
 
     const handleAddClick = () => {
@@ -163,7 +160,6 @@ const AppointmentList = () => {
     };
 
     const validateAppointment = () => {
-        debugger;
         let hasError = false;
         const newErrors = {};
     
@@ -180,27 +176,18 @@ const AppointmentList = () => {
     
         return hasError;
     };
-    
 
     const handleSaveAppointment = async () => {
-        debugger
         if (validateAppointment()) {
             return;
         }
-        debugger
 
         if (selectedAppointment) {
             const selectedDateTime = new Date(patientAppointment.appointmentDateTime);
-
-            // Get the timezone offset in minutes
             const timezoneOffset = selectedDateTime.getTimezoneOffset();
-
-            // Adjust the date and time by subtracting the timezone offset
             selectedDateTime.setMinutes(selectedDateTime.getMinutes() - timezoneOffset);
-
-            // Convert the adjusted date and time to ISO 8601 format
             const isoDateTime = selectedDateTime.toISOString();
-            console.log("updateData", patientAppointment)
+
             const updatedPatientData = {
                 "appointmentID": patientAppointment.appointmentID,
                 "appointmentDateTime": isoDateTime,
@@ -217,7 +204,8 @@ const AppointmentList = () => {
                 "reasonForAppointment": patientAppointment.reasonForAppointment,
                 "specialityID": parseInt(patientAppointment.specialityID),
                 "doctorID": parseInt(patientAppointment.doctorID)
-            }
+            };
+
             try {
                 const response = await axios.put(`https://localhost:7137/api/Patient/Update/`, updatedPatientData, {
                     headers: {
@@ -227,23 +215,15 @@ const AppointmentList = () => {
                 });
                 console.log('Patient updated successfully:');
                 fetchPatientList();
-                setPatientAppointment(initialData)
-                setPatientAppointmentError(initialErrors)
+                setPatientAppointment(initialData);
+                setPatientAppointmentError(initialErrors);
             } catch (error) {
                 console.error('Error updating patient:', error.message);
             }
         } else {
-
-            console.log("first", patientAppointment)
             const selectedDateTime = new Date(patientAppointment.appointmentDateTime);
-
-            // Get the timezone offset in minutes
             const timezoneOffset = selectedDateTime.getTimezoneOffset();
-
-            // Adjust the date and time by subtracting the timezone offset
             selectedDateTime.setMinutes(selectedDateTime.getMinutes() - timezoneOffset);
-
-            // Convert the adjusted date and time to ISO 8601 format
             const isoDateTime = selectedDateTime.toISOString();
             const patientData = {
                 "appointmentID": 0,
@@ -261,7 +241,7 @@ const AppointmentList = () => {
                 "reasonForAppointment": patientAppointment.reasonForAppointment,
                 "specialityID": parseInt(patientAppointment.specialityID),
                 "doctorID": parseInt(patientAppointment.doctorID)
-            }
+            };
 
             try {
                 const response = await axios.post('https://localhost:7137/api/Patient/Insert', patientData, {
@@ -272,8 +252,8 @@ const AppointmentList = () => {
                 });
                 const data = response.data;
                 console.log('Patient inserted successfully:', data);
-                setPatientAppointment(initialData)
-                setPatientAppointmentError(initialErrors)
+                setPatientAppointment(initialData);
+                setPatientAppointmentError(initialErrors);
                 fetchPatientList();
             } catch (error) {
                 console.error('Error inserting patient:', error.message);
@@ -282,19 +262,29 @@ const AppointmentList = () => {
         setIsModalOpen(false);
     };
 
-    const handleDeleteAppointment = async (appointmentId) => {
+    const handleDeleteClick = (appointmentId) => {
+        setSelectedAppointment(appointmentId);
+        setIsDeleteModalOpen(true);
+    };
+
+    const handleDeleteConfirmed = async () => {
         try {
-            const response = await axios.delete(`https://localhost:7137/api/Patient/Delete/${appointmentId}`, {
+            const response = await axios.delete(`https://localhost:7137/api/Patient/Delete/${selectedAppointment}`, {
                 headers: {
                     Authorization: `Bearer ${token}`
                 }
             });
             const data = response.data;
-            fetchPatientList()
+            fetchPatientList();
             console.log('Patient deleted successfully:');
+            setIsDeleteModalOpen(false);
         } catch (error) {
             console.error('Error deleting patient:', error.message);
         }
+    };
+
+    const handleDeleteModalClose = () => {
+        setIsDeleteModalOpen(false);
     };
 
     const handleChange = (e) => {
@@ -305,39 +295,40 @@ const AppointmentList = () => {
         }));
         setPatientAppointmentError({
             ...patientAppointmentError, [name]: false
-        })
+        });
     };
 
     const handleDateChange = (value) => {
         setPatientAppointment({ ...patientAppointment, dob: value });
-        setPatientAppointmentError({...patientAppointmentError,dob:false})
+        setPatientAppointmentError({...patientAppointmentError,dob:false});
     };
+
     const handleDateTimeChange = (date) => {
-        console.log("dateandtime", date._d)
         setPatientAppointment({ ...patientAppointment, appointmentDateTime: date._d });
-        setPatientAppointmentError({...patientAppointmentError,appointmentDateTime:false})
+        setPatientAppointmentError({...patientAppointmentError,appointmentDateTime:false});
     };
 
     const handleDoctorChange = (selectedOption) => {
         setPatientAppointment({ ...patientAppointment, doctorID: selectedOption.value });
-        setPatientAppointmentError({...patientAppointmentError,doctorID:false})
+        setPatientAppointmentError({...patientAppointmentError,doctorID:false});
     };
+
     const handleSpecialtyChange = (selectedOption) => {
         setPatientAppointment({ ...patientAppointment, specialityID: selectedOption.value });
-        setPatientAppointmentError({...patientAppointmentError,specialityID:false})
+        setPatientAppointmentError({...patientAppointmentError,specialityID:false});
     };
+
     const handleStateChange = (selectedOption) => {
         setPatientAppointment({ ...patientAppointment, stateID: selectedOption.value });
-        setPatientAppointmentError({...patientAppointmentError,stateID:false})
+        setPatientAppointmentError({...patientAppointmentError,stateID:false});
         let filteredCities = cityList.filter(city => city.StateID === parseInt(selectedOption.value));
-        setFilterCity(filteredCities)
+        setFilterCity(filteredCities);
     };
 
     const handleCityChange = (selectedOption) => {
         setPatientAppointment({ ...patientAppointment, cityID: selectedOption.value });
-        setPatientAppointmentError({...patientAppointmentError,cityID:false})
+        setPatientAppointmentError({...patientAppointmentError,cityID:false});
     };
-
 
     return (
         <div className="container" style={{ height: "100vh" }}>
@@ -353,7 +344,6 @@ const AppointmentList = () => {
                         <th>Gender</th>
                         <th>Doctor Name</th>
                         <th>Specialty</th>
-                        {/* <th>Education</th> */}
                         <th>Action</th>
                     </tr>
                 </thead>
@@ -369,10 +359,9 @@ const AppointmentList = () => {
                             </td>
                             <td>{appointment?.DoctorName}</td>
                             <td>{appointment?.SpecialityName}</td>
-                            {/* <td>{appointment?.education}</td> */}
                             <td>
-                                <Button variant="info" onClick={() => handleEditClick(appointment)}className="mx-2">Edit</Button>
-                                <Button variant="danger" onClick={() => handleDeleteAppointment(appointment.AppointmentID)}>Delete</Button>
+                                <Button variant="info" onClick={() => handleEditClick(appointment)} className="mx-2">Edit</Button>
+                                <Button variant="danger" onClick={() => handleDeleteClick(appointment.AppointmentID)}>Delete</Button>
                             </td>
                         </tr>
                     ))}
@@ -397,6 +386,11 @@ const AppointmentList = () => {
                 handleCityChange={handleCityChange}
                 setPatientAppointment={setPatientAppointment}
                 patientAppointmentError={patientAppointmentError}
+            />
+            <DeleteConfirmationModal
+                show={isDeleteModalOpen}
+                handleClose={handleDeleteModalClose}
+                handleDelete={handleDeleteConfirmed}
             />
         </div>
     );

@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Button, Modal, Table } from 'react-bootstrap';
 import DoctorModal from './DoctorModal';
+import DeleteConfirmationModal from './DeleteConfirmationModal'; // Import your DeleteConfirmationModal component
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 
@@ -8,6 +9,7 @@ const DoctorList = () => {
     const token = localStorage.getItem("token");
     const navigate = useNavigate()
     const [isModalOpen, setIsModalOpen] = useState(false);
+    const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false); // State for delete confirmation modal
     const [selectedDoctor, setSelectedDoctor] = useState(null);
     const [doctorsList, setDoctorsList] = useState([]);
     const [specialtiesList, setSpecialtiesList] = useState([]);
@@ -23,7 +25,6 @@ const DoctorList = () => {
         Education: false,
     }
     const [doctorError, setDoctorError] = useState(initialErrors)
-
 
     useEffect(()=>{
         if(!token){
@@ -75,11 +76,9 @@ const DoctorList = () => {
         setIsModalOpen(false);
         setDoctorError(initialErrors)
         setDoctor(initialData)
-
     };
 
     const validateDoctor = () => {
-        debugger
         let hasError = false;
         const newErrors = {};
 
@@ -98,7 +97,6 @@ const DoctorList = () => {
     };
 
     const handleSaveDoctor = async () => {
-        debugger
         if (validateDoctor()) {
             return;
         }
@@ -144,8 +142,6 @@ const DoctorList = () => {
             } catch (error) {
                 console.error('Error inserting doctor:', error.message);
             }
-
-
         }
         setIsModalOpen(false);
     };
@@ -155,35 +151,39 @@ const DoctorList = () => {
         setIsModalOpen(true);
     };
 
-    const handleDeleteDoctor = async (doctorId) => {
-        console.log("Doctor", doctorId)
+    const handleDeleteDoctor = (doctorId) => {
+        setSelectedDoctor(doctorId); // Set the selected doctor for deletion
+        setIsDeleteModalOpen(true); // Open the delete confirmation modal
+    };
+
+    const handleDeleteConfirmed = async () => {
         try {
-            const response = await axios.delete(`https://localhost:7137/api/Doctor/Delete/${doctorId}`, {
+            const response = await axios.delete(`https://localhost:7137/api/Doctor/Delete/${selectedDoctor}`, {
                 headers: {
                     Authorization: `Bearer ${token}`
                 }
             });
             fetchDoctorList();
+            setIsDeleteModalOpen(false); // Close the delete confirmation modal
         } catch (error) {
             console.error('Error deleting doctor:', error.message);
         }
     };
 
-    const handleChange = (e) => {
-        debugger
-        const { name, value } = e.target;
-      
-            setDoctor(prevState => ({
-                ...prevState,
-                [name]: value
-            }));
-            setDoctorError({
-                ...doctorError, [name]: false
-            })
-    
+    const handleDeleteModalClose = () => {
+        setIsDeleteModalOpen(false); // Close the delete confirmation modal without confirming the deletion
     };
 
-    console.log("first", doctorError)
+    const handleChange = (e) => {
+        const { name, value } = e.target;
+        setDoctor(prevState => ({
+            ...prevState,
+            [name]: value
+        }));
+        setDoctorError({
+            ...doctorError, [name]: false
+        })
+    };
 
     const handleSpecialtyChange = (selectedOption) => {
         setDoctor({ ...doctor, SpecialityID: selectedOption.value });
@@ -215,7 +215,7 @@ const DoctorList = () => {
                             <td>{doctor.SpecialityName}</td>
                             <td>{doctor.Education}</td>
                             <td>
-                                <Button variant="info" onClick={() => handleEditDoctor(doctor)}className="mx-2">Edit</Button>
+                                <Button variant="info" onClick={() => handleEditDoctor(doctor)} className="mx-2">Edit</Button>
                                 <Button variant="danger" onClick={() => handleDeleteDoctor(doctor.DoctorID)}>Delete</Button>
                             </td>
                         </tr>
@@ -234,8 +234,12 @@ const DoctorList = () => {
                 doctorError={doctorError}
                 specialtiesList={specialtiesList}
                 handleSpecialtyChange={handleSpecialtyChange}
+            />
 
-
+            <DeleteConfirmationModal
+                show={isDeleteModalOpen}
+                handleClose={handleDeleteModalClose}
+                handleDelete={handleDeleteConfirmed}
             />
         </div>
     );

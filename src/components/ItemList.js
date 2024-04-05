@@ -3,12 +3,14 @@ import { Button, Table } from 'react-bootstrap';
 import ItemModal from './ItemModal';
 import axios from "axios";
 import { useNavigate } from 'react-router-dom';
+import DeleteConfirmationModal from './DeleteConfirmationModal'; 
 
 const ItemList = () => {
     const token = localStorage.getItem("token");
     const navigate = useNavigate();
 
     const [isModalOpen, setIsModalOpen] = useState(false);
+    const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false); 
     const [selectedItem, setSelectedItem] = useState(null);
     const [itemsList, setItemsList] = useState([]);
     const initialData = {
@@ -40,7 +42,6 @@ const ItemList = () => {
         }
     }
 
-
     useEffect(() => {
         getItemsList();
     }, [])
@@ -57,7 +58,6 @@ const ItemList = () => {
     };
 
     const validateItem = () => {
-        debugger
         let hasError = false;
         const newErrors = {};
 
@@ -76,7 +76,6 @@ const ItemList = () => {
     };
 
     const handleSave = async () => {
-        debugger
         if (validateItem()) {
             return;
         }
@@ -120,25 +119,14 @@ const ItemList = () => {
         handleCloseModal();
     };
 
-
-
     const handleEditClick = (item) => {
         setSelectedItem(item);
         setIsModalOpen(true);
     };
 
-    const handleDeleteClick = async (itemId) => {
-        console.log("ItemID", itemId)
-        try {
-            const response = await axios.delete(`https://localhost:7137/api/Item/Delete/${itemId}`, {
-                headers: {
-                    Authorization: `Bearer ${token}`,
-                }
-            });
-            getItemsList();
-        } catch (error) {
-            console.error('Error deleting item:', error.message);
-        }
+    const handleDeleteClick = (itemId) => {
+        setSelectedItem(itemId); 
+        setIsDeleteModalOpen(true); 
     };
 
     const handleChange = (e) => {
@@ -152,6 +140,23 @@ const ItemList = () => {
         })
     };
 
+    const handleDeleteConfirmed = async () => {
+        try {
+            const response = await axios.delete(`https://localhost:7137/api/Item/Delete/${selectedItem}`, {
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                }
+            });
+            getItemsList();
+            setIsDeleteModalOpen(false); 
+        } catch (error) {
+            console.error('Error deleting item:', error.message);
+        }
+    };
+
+    const handleDeleteModalClose = () => {
+        setIsDeleteModalOpen(false); 
+    };
 
     return (
         <div className="container" style={{ height: "100vh" }}>
@@ -189,7 +194,11 @@ const ItemList = () => {
                 setItem={setItem}
                 handleChange={handleChange}
                 itemError={itemError}
-
+            />
+            <DeleteConfirmationModal
+                show={isDeleteModalOpen}
+                handleClose={handleDeleteModalClose}
+                handleDelete={handleDeleteConfirmed} 
             />
         </div>
     );
