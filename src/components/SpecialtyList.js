@@ -3,13 +3,12 @@ import { Button, Table } from 'react-bootstrap';
 import SpecialtyModal from './SpecialtyModal';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
-import DeleteConfirmationModal from './DeleteConfirmationModal'; // Import your DeleteConfirmationModal component
+import DeleteConfirmationModal from './DeleteConfirmationModal';
 
-const SpecialtyList = () => {
+const SpecialtyList = ({darkMode}) => {
     const token = localStorage.getItem("token");
     const navigate = useNavigate();
     const [isModalOpen, setIsModalOpen] = useState(false);
-    const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false); // State for delete confirmation modal
     const [specialties, setSpecialties] = useState([]);
     const [selectedSpecialty, setSelectedSpecialty] = useState(null);
     const initialData = {
@@ -17,7 +16,6 @@ const SpecialtyList = () => {
         Description: ''
     }
     const [speciality, setSpeciality] = useState(initialData);
-
     const initialErrors = {
         SpecialityName: false,
         Description: false
@@ -27,14 +25,17 @@ const SpecialtyList = () => {
         SpecialityName: false,
         Description: false
     })
+    const [deleteSpecialtyId,setDeleteSpecialtyId] = useState(null);
+    const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false); 
+    const [inUseError,setInUseError] = useState(false)
+    const deleteMessage = "Are you sure you want to delete this Specialty?"
+
 
     useEffect(() => {
         if (!token) {
             navigate('/')
         }
     }, [])
-
-
 
     const getSpecialityList = async () => {
         try {
@@ -67,6 +68,7 @@ const SpecialtyList = () => {
     };
 
     const validateSpecialty = () => {
+        debugger
         let hasError = false;
         const newErrors = {};
 
@@ -85,18 +87,19 @@ const SpecialtyList = () => {
     };
 
     const handleSave = async () => {
+        debugger
         if (validateSpecialty()) {
             return;
         }
         if (selectedSpecialty) {
             const updatedData = {
+
                 specialityID: selectedSpecialty?.SpecialityID,
                 specialityName: speciality?.SpecialityName,
                 isGynac: false,
                 description: speciality?.Description
-            }
 
-            console.log("selectedSpecialty", updatedData)
+            }
             try {
                 const response = await axios.put(`https://localhost:7137/api/Speciality/Update/`, updatedData, {
                     headers: {
@@ -137,29 +140,28 @@ const SpecialtyList = () => {
         setIsModalOpen(true);
     };
 
-    const handleDeleteClick = (id) => {
-        setSelectedSpecialty(id); // Set the selected specialty for deletion
-        setIsDeleteModalOpen(true); // Open the delete confirmation modal
-    };
+    const handleDeleteClick = async(id) => {
+        setDeleteSpecialtyId(id)
+        setIsDeleteModalOpen(true); 
+      };
 
     const handleDeleteConfirmed = async () => {
         try {
-            const response = await axios.delete(`https://localhost:7137/api/Speciality/Delete/${selectedSpecialty}`, {
+            const response = await axios.delete(`https://localhost:7137/api/Speciality/Delete/${deleteSpecialtyId}`, {
                 headers: {
                     Authorization: `Bearer ${token}`
                 }
             });
             getSpecialityList();
-            setIsDeleteModalOpen(false); // Close the delete confirmation modal
-            console.log('Speciality deleted successfully:');
+            setIsDeleteModalOpen(false); 
         } catch (error) {
-            console.error('Error deleting speciality:', error.message);
+            console.error('Error deleting item:', error.response.data);
+            if (error.response.data.includes("Selected record exists in Doctors.") ){
+                    setInUseError(true)
+            }
+            
         }
-    };
-
-    const handleDeleteModalClose = () => {
-        setIsDeleteModalOpen(false); // Close the delete confirmation modal without deletion
-    };
+      };
 
     const handleChange = (e) => {
         const { name, value } = e.target;
@@ -172,15 +174,20 @@ const SpecialtyList = () => {
         })
     };
 
+    const handleDeleteModalClose = () => {
+        setIsDeleteModalOpen(false); 
+        setInUseError(false)
+      };
+
     return (
         <div className="container " style={{ height: "100vh" }}>
-            <div className="w-100 d-flex justify-content-between">
+            <div className="w-100 d-flex justify-content-between my-2">
                 <h3>Specialty List</h3>
                 <Button variant="primary" onClick={handleAddClick}>
                     Add
                 </Button>
             </div>
-            <Table striped bordered hover>
+            <Table striped bordered hover variant={darkMode?"dark":"light"}>
                 <thead>
                     <tr>
                         <th>S.No.</th>
@@ -218,11 +225,16 @@ const SpecialtyList = () => {
                 setErrors={setErrors}
                 setSpeciality={setSpeciality}
                 specialtyError={specialtyError}
+                
+                darkMode={darkMode}
             />
             <DeleteConfirmationModal
                 show={isDeleteModalOpen}
                 handleClose={handleDeleteModalClose}
-                handleDelete={handleDeleteConfirmed} // Call handleDeleteConfirmed when delete is confirmed
+                handleDelete={handleDeleteConfirmed}
+                deleteMessage={deleteMessage}
+                darkMode={darkMode}
+                inUseError={inUseError}
             />
         </div>
     );

@@ -3,14 +3,12 @@ import { Button, Table } from 'react-bootstrap';
 import ItemModal from './ItemModal';
 import axios from "axios";
 import { useNavigate } from 'react-router-dom';
-import DeleteConfirmationModal from './DeleteConfirmationModal'; 
+import DeleteConfirmationModal from './DeleteConfirmationModal';
 
-const ItemList = () => {
+const ItemList = ({darkMode}) => {
     const token = localStorage.getItem("token");
     const navigate = useNavigate();
-
     const [isModalOpen, setIsModalOpen] = useState(false);
-    const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false); 
     const [selectedItem, setSelectedItem] = useState(null);
     const [itemsList, setItemsList] = useState([]);
     const initialData = {
@@ -21,12 +19,16 @@ const ItemList = () => {
         itemName: false
     }
     const [itemError, setItemError] = useState(initialError)
+    const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+    const [deleteItemId, setDeleteItemId] = useState(null);
+    const deleteMessage = "Are you sure you want to delete this item?"
+    const [duplicateError,setDuplicateError] = useState(false)
 
-    useEffect(()=>{
-        if(!token){
+    useEffect(() => {
+        if (!token) {
             navigate('/')
         }
-    },[])
+    }, [])
 
     const getItemsList = async () => {
         try {
@@ -51,6 +53,7 @@ const ItemList = () => {
         setSelectedItem(null);
         setItemError(initialData)
         setItem(initialData)
+        setDuplicateError(false)
     };
 
     const handleAddClick = () => {
@@ -58,6 +61,7 @@ const ItemList = () => {
     };
 
     const validateItem = () => {
+        debugger
         let hasError = false;
         const newErrors = {};
 
@@ -76,6 +80,7 @@ const ItemList = () => {
     };
 
     const handleSave = async () => {
+        debugger
         if (validateItem()) {
             return;
         }
@@ -101,6 +106,7 @@ const ItemList = () => {
             }
         } else {
             // Add new item
+            
             const newItem = { ItemName: item.itemName };
             try {
 
@@ -110,13 +116,20 @@ const ItemList = () => {
                         'Content-Type': 'application/json'
                     }
                 });
+                console.log('Item inserted successfully',response);
+
                 getItemsList();
-                console.log('Item inserted successfully');
+                
+                handleCloseModal();
             } catch (error) {
-                console.error('Error inserting item:', error.message);
+                console.error( error.response.data);
+                if (error.response.data.includes("Cannot accept duplicate item name") ){
+                    setDuplicateError(true);
+                }
+                
             }
         }
-        handleCloseModal();
+        
     };
 
     const handleEditClick = (item) => {
@@ -124,12 +137,30 @@ const ItemList = () => {
         setIsModalOpen(true);
     };
 
-    const handleDeleteClick = (itemId) => {
-        setSelectedItem(itemId); 
-        setIsDeleteModalOpen(true); 
+    const handleDeleteClick = async (itemId) => {
+        setDeleteItemId(itemId)
+        setIsDeleteModalOpen(true);
+    };
+
+    const handleDeleteConfirmed = async () => {
+        
+        try {
+            const response = await axios.delete(`https://localhost:7137/api/Item/Delete/${deleteItemId}`, {
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                }
+            });
+            getItemsList();
+            
+        } catch (error) {
+            console.error('Error deleting item:', error.message);
+        }
+        setIsDeleteModalOpen(false);
+
     };
 
     const handleChange = (e) => {
+        setDuplicateError(false)
         const { name, value } = e.target;
         setItem(prevState => ({
             ...prevState,
@@ -140,31 +171,17 @@ const ItemList = () => {
         })
     };
 
-    const handleDeleteConfirmed = async () => {
-        try {
-            const response = await axios.delete(`https://localhost:7137/api/Item/Delete/${selectedItem}`, {
-                headers: {
-                    Authorization: `Bearer ${token}`,
-                }
-            });
-            getItemsList();
-            setIsDeleteModalOpen(false); 
-        } catch (error) {
-            console.error('Error deleting item:', error.message);
-        }
-    };
-
     const handleDeleteModalClose = () => {
-        setIsDeleteModalOpen(false); 
+        setIsDeleteModalOpen(false);
     };
 
     return (
         <div className="container" style={{ height: "100vh" }}>
-            <div className="w-100 d-flex justify-content-between">
+            <div className="w-100 d-flex justify-content-between my-2">
                 <h3>Item List</h3>
                 <Button variant="primary" onClick={handleAddClick}>Add</Button>
             </div>
-            <Table striped bordered hover>
+            <Table striped bordered hover variant={darkMode?"dark":"light"}>
                 <thead>
                     <tr>
                         <th>S.No.</th>
@@ -185,6 +202,7 @@ const ItemList = () => {
                     ))}
                 </tbody>
             </Table>
+
             <ItemModal
                 show={isModalOpen}
                 handleClose={handleCloseModal}
@@ -194,11 +212,15 @@ const ItemList = () => {
                 setItem={setItem}
                 handleChange={handleChange}
                 itemError={itemError}
+                darkMode={darkMode}
+                duplicateError={duplicateError}
             />
             <DeleteConfirmationModal
                 show={isDeleteModalOpen}
                 handleClose={handleDeleteModalClose}
-                handleDelete={handleDeleteConfirmed} 
+                handleDelete={handleDeleteConfirmed}
+                deleteMessage={deleteMessage}
+                darkMode = {darkMode}
             />
         </div>
     );
